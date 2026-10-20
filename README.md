@@ -1,5 +1,10 @@
 # playgta5 Source Code
 This code is grabbed from playgta5.com before it got took down. You can run this locally or make it public hehe.
+This github page serves as archival for the original V1 port of the game,
+
+# V2 of Grand-V is releasing on a new github page,
+
+https://github.com/SebasKitten/Grand-V
 
 # Credits
 Shoutout to Sebas Furbastian on Telegram for scrapping this code. Idk what is his GitHub but here's the Telegram and X.
