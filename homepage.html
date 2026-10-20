@@ -10,7 +10,6 @@
       --bg2: #111d16;
       --panel-border: rgba(156, 224, 102, 0.28);
       --green: #a4e849;
-      --green-soft: rgba(164, 232, 73, 0.14);
       --text: #edf5ed;
       --muted: #c6d5c2;
       --shadow: rgba(0, 0, 0, 0.72);
@@ -225,6 +224,64 @@
     .top-session { height: 52%; }
     .bottom-session { height: 48%; }
 
+    .pause-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.52);
+      z-index: 20;
+    }
+
+    .pause-overlay.visible {
+      display: flex;
+    }
+
+    .pause-panel {
+      width: min(420px, 90vw);
+      background: rgba(12, 18, 15, 0.96);
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+      padding: 24px 22px 18px;
+      text-align: center;
+    }
+
+    .pause-panel h3 {
+      margin: 0 0 18px;
+      font-size: 22px;
+      letter-spacing: 0.12rem;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .pause-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .pause-btn {
+      appearance: none;
+      border: 1px solid rgba(164, 232, 73, 0.38);
+      background: var(--green);
+      color: #0d170d;
+      padding: 12px 18px;
+      min-width: 150px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.14rem;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .pause-btn.secondary {
+      background: rgba(255,255,255,0.02);
+      color: var(--text);
+      border-color: rgba(255,255,255,0.12);
+    }
+
     .shoutout {
       position: fixed;
       inset: 0;
@@ -233,7 +290,7 @@
       align-items: center;
       justify-content: center;
       padding: 18px;
-      z-index: 10;
+      z-index: 30;
     }
 
     .shoutout[hidden] {
@@ -328,6 +385,16 @@
     </div>
   </div>
 
+  <div class="pause-overlay" id="pause-overlay" aria-live="polite">
+    <div class="pause-panel">
+      <h3>Pause Menu</h3>
+      <div class="pause-buttons">
+        <button class="pause-btn" id="resume-btn" type="button">Resume</button>
+        <button class="pause-btn secondary" id="exit-btn" type="button">Exit</button>
+      </div>
+    </div>
+  </div>
+
   <div class="shoutout" id="shoutout" hidden>
     <div class="popup" role="dialog" aria-modal="true" aria-labelledby="shoutout-title">
       <p class="popup-kicker">One-time message</p>
@@ -348,19 +415,37 @@
       var playBtn = document.getElementById('play-btn');
       var splitCheckbox = document.getElementById('split-mode');
       var gameLayout = document.getElementById('game-layout');
+      var pauseOverlay = document.getElementById('pause-overlay');
+      var resumeBtn = document.getElementById('resume-btn');
+      var exitBtn = document.getElementById('exit-btn');
       var shoutout = document.getElementById('shoutout');
       var closeBtn = document.getElementById('shoutout-close');
+      var inGameMode = false;
+
+      function hidePauseMenu() {
+        if (pauseOverlay) pauseOverlay.classList.remove('visible');
+      }
+
+      function showPauseMenu() {
+        if (pauseOverlay && inGameMode) pauseOverlay.classList.add('visible');
+      }
+
+      function goToLauncher() {
+        window.location.href = window.location.pathname;
+      }
 
       function startGame() {
+        inGameMode = true;
         if (launcher) launcher.style.display = 'none';
         if (gameLayout) {
+          gameLayout.classList.toggle('active', !!(splitCheckbox && splitCheckbox.checked));
           if (splitCheckbox && splitCheckbox.checked) {
-            gameLayout.classList.add('active');
+            gameLayout.style.display = 'flex';
           } else {
-            gameLayout.classList.remove('active');
             gameLayout.style.display = 'none';
           }
         }
+        hidePauseMenu();
       }
 
       if (playBtn) {
@@ -390,6 +475,30 @@
           }
         });
       }
+
+      if (resumeBtn) {
+        resumeBtn.addEventListener('click', function () {
+          hidePauseMenu();
+        });
+      }
+
+      if (exitBtn) {
+        exitBtn.addEventListener('click', function () {
+          goToLauncher();
+        });
+      }
+
+      document.addEventListener('keydown', function (event) {
+        if (!inGameMode) return;
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          if (pauseOverlay && pauseOverlay.classList.contains('visible')) {
+            hidePauseMenu();
+          } else {
+            showPauseMenu();
+          }
+        }
+      });
     })();
   </script>
 </body>
