@@ -8,13 +8,13 @@
     :root {
       --bg: #050b08;
       --bg2: #111d16;
-      --panel: rgba(12, 18, 15, 0.92);
-      --panel-border: rgba(156, 224, 102, 0.26);
+      --panel-border: rgba(156, 224, 102, 0.28);
       --green: #a4e849;
-      --green-strong: #86cf2e;
+      --green-soft: rgba(164, 232, 73, 0.14);
       --text: #edf5ed;
       --muted: #c6d5c2;
-      --shadow: rgba(0, 0, 0, 0.7);
+      --shadow: rgba(0, 0, 0, 0.72);
+      --panel: rgba(10, 16, 13, 0.95);
     }
 
     * { box-sizing: border-box; }
@@ -62,7 +62,7 @@
     .content {
       position: relative;
       z-index: 1;
-      width: min(720px, 100%);
+      width: min(820px, 100%);
       text-align: center;
     }
 
@@ -93,12 +93,32 @@
       color: var(--muted);
     }
 
+    .launcher-options {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 28px;
+      padding: 10px 16px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255,255,255,0.02);
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.12rem;
+      font-size: 12px;
+    }
+
+    .launcher-options input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--green);
+    }
+
     .actions {
-      margin-top: 32px;
+      margin-top: 30px;
       display: flex;
       justify-content: center;
-      gap: 18px;
       flex-wrap: wrap;
+      gap: 18px;
     }
 
     .btn {
@@ -128,6 +148,82 @@
       text-transform: uppercase;
       color: var(--muted);
     }
+
+    .game-layout {
+      position: absolute;
+      inset: 0;
+      display: none;
+      background: #040806;
+      padding: 18px;
+      gap: 12px;
+      flex-direction: column;
+    }
+
+    .game-layout.active {
+      display: flex;
+    }
+
+    .session {
+      position: relative;
+      flex: 1;
+      border: 1px solid var(--panel-border);
+      background: linear-gradient(180deg, rgba(18, 28, 20, 0.96), rgba(7, 10, 8, 0.96));
+      overflow: hidden;
+    }
+
+    .session::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(164, 232, 73, 0.05), transparent 32%, rgba(255,255,255,0.02));
+      pointer-events: none;
+    }
+
+    .session-label {
+      position: absolute;
+      top: 14px;
+      left: 18px;
+      font-size: 12px;
+      letter-spacing: 0.2rem;
+      text-transform: uppercase;
+      color: var(--green);
+      z-index: 1;
+    }
+
+    .session-view {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.32);
+      font-size: clamp(24px, 3vw, 34px);
+      text-transform: uppercase;
+      letter-spacing: 0.15rem;
+      z-index: 0;
+    }
+
+    .session-status {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      height: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.03);
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .session-status > span {
+      display: block;
+      height: 100%;
+      width: 68%;
+      background: linear-gradient(90deg, rgba(164, 232, 73, 0.8), rgba(164, 232, 73, 0.25));
+    }
+
+    .top-session { height: 52%; }
+    .bottom-session { height: 48%; }
 
     .shoutout {
       position: fixed;
@@ -206,11 +302,29 @@
       <h1>GTA V</h1>
       <p class="subtitle">Web port start screen for a browser-based GTA V experience.</p>
 
+      <label class="launcher-options" for="split-mode">
+        <input id="split-mode" type="checkbox">
+        <span>Split Screen</span>
+      </label>
+
       <div class="actions">
         <button class="btn" id="play-btn" type="button">Play</button>
       </div>
 
       <div class="meta">Browser / WebGPU / Local Preview</div>
+    </div>
+  </div>
+
+  <div class="game-layout" id="game-layout" aria-live="polite">
+    <div class="session top-session">
+      <div class="session-label">Controller Session</div>
+      <div class="session-view">Top Screen</div>
+      <div class="session-status"><span></span></div>
+    </div>
+    <div class="session bottom-session">
+      <div class="session-label">Keyboard Session</div>
+      <div class="session-view">Bottom Screen</div>
+      <div class="session-status"><span style="width: 82%"></span></div>
     </div>
   </div>
 
@@ -232,41 +346,48 @@
     (function () {
       var launcher = document.getElementById('launcher-screen');
       var playBtn = document.getElementById('play-btn');
+      var splitCheckbox = document.getElementById('split-mode');
+      var gameLayout = document.getElementById('game-layout');
       var shoutout = document.getElementById('shoutout');
       var closeBtn = document.getElementById('shoutout-close');
 
-      function hideLauncher() {
+      function startGame() {
         if (launcher) launcher.style.display = 'none';
-      }
-
-      function showShoutout() {
-        if (!shoutout) return;
-        shoutout.hidden = false;
-        var wait = 10000;
-        var start = Date.now();
-        closeBtn.textContent = 'Close (10)';
-        closeBtn.disabled = true;
-
-        var timer = setInterval(function () {
-          var left = Math.ceil((wait - (Date.now() - start)) / 1000);
-          if (left <= 0) {
-            clearInterval(timer);
-            closeBtn.disabled = false;
-            closeBtn.textContent = 'Close';
+        if (gameLayout) {
+          if (splitCheckbox && splitCheckbox.checked) {
+            gameLayout.classList.add('active');
           } else {
-            closeBtn.textContent = 'Close (' + left + ')';
+            gameLayout.classList.remove('active');
+            gameLayout.style.display = 'none';
           }
-        }, 1000);
-
-        closeBtn.onclick = function () {
-          shoutout.hidden = true;
-        };
+        }
       }
 
       if (playBtn) {
         playBtn.addEventListener('click', function () {
-          hideLauncher();
-          showShoutout();
+          startGame();
+          if (shoutout) {
+            shoutout.hidden = false;
+            var wait = 10000;
+            var start = Date.now();
+            closeBtn.textContent = 'Close (10)';
+            closeBtn.disabled = true;
+
+            var timer = setInterval(function () {
+              var left = Math.ceil((wait - (Date.now() - start)) / 1000);
+              if (left <= 0) {
+                clearInterval(timer);
+                closeBtn.disabled = false;
+                closeBtn.textContent = 'Close';
+              } else {
+                closeBtn.textContent = 'Close (' + left + ')';
+              }
+            }, 1000);
+
+            closeBtn.onclick = function () {
+              shoutout.hidden = true;
+            };
+          }
         });
       }
     })();
